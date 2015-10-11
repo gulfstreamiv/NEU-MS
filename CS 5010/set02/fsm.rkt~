@@ -1,0 +1,62 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname fsm) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
+(require rackunit)
+(require "extras.rkt")
+(provide
+ initial-state
+ next-state
+ accepting-state?
+ error-state?)
+
+;Data definitions
+;INTERP: state is one of the following variables:
+;The meaning of each state is included within the string beside each variable
+;INIT: initial state
+;EXPECT-C: intermediate state
+;EXPECT-ABD: intermediate state
+;NONE-EF: intermediate/final state
+;NO-MORE: final state
+;ERROR: error state
+(define INIT "I want any number of a or b, or one c")
+(define EXPECT-C "I want one c")
+(define EXPECT-ABD "I want any number of a or b, or one d")
+(define DONE-EF "I'm done, but still could accept any number of e or f")
+(define NO-MORE "I'm done, no more inputs allowed.")
+(define ERROR "I want any number of a or b, or one c")
+
+;initial-state : Number -> State
+;GIVEN: a number
+;RETURNS: a representation of the initial state
+;of your machine.  The given number is ignored.
+(define initial-state (n)
+  (INIT))
+
+;next-state : State MachineInput -> State
+;GIVEN: a state of the machine and a machine input
+;RETURNS: the state that should follow the given input.
+(define next-state (state input)
+  (cond
+     [(string=? state INIT) (we-need-abc input)]
+     [(string=? state EPECT-ABD) (we-need-abd input)]
+     [(string=? state DONE-EF) (we-need-none-ef input)]
+     [(string=? state NO-MORE) (we-need-no-more input)]
+     [else ERROR]))
+
+;we-need-abc: State -> State
+;This function checks the given input, and directs to the corresponding next state 
+;GIVEN: a machine input, like "a", "b", "c", etc.
+;RETURNS: a state that corresponds to the given input
+;Example: (we-need-abc "a") -> INIT
+;Strategy: divide into cases based on the input
+(define we-need-abc (input)
+  (cond
+    [(or (string=? input "a") (string=? input "b") INIT)]
+    [(string=? input "c") EXPECT-ABD]
+    [else ERROR]))
+
+(define we-need-abd (input)
+  (cond
+    [(or (string=? input "a") (string=? input "b") EXPECT-ABD)]
+    [(string=? input "d") DONE-EF]
+    [else ERROR]))

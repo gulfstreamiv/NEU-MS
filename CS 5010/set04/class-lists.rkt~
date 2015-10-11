@@ -1,0 +1,64 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname class-lists) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
+(require "extras.rkt")
+(require rackunit)
+
+
+;;slip
+(define-struct slip (color name1 name2))
+
+
+
+;felleisen-roster : ListOfSlip -> ListOfSlip
+;GIVEN: a list of slips
+;RETURNS: a list of slips containing all the students in Professor
+;Felleisen's class, without duplication.
+(define (felleisen-roster slips)
+ (get-f-roster slips (list)))
+
+;;get-f-roster
+(define (get-f-roster slips result)
+  (cond
+    [(empty? slips) result]
+    [(if-color-not-yellow (first slips)) (get-f-roster (rest slips) result)]
+    [(if-name-already-in-list (first slips) result)
+     (get-f-roster (rest slips) result)]
+    [else (get-f-roster (rest slips) (cons (first slip) result))]))
+
+;;if-color-not-yellow
+(define (if-color-not-yellow slip)
+  (not (string=? (slip-color slip) "yellow")))
+
+;;if-name-already-in-list
+(define (if-name-already-in-list slip result)
+  (or (member slip result)
+      (member (reverse-name-order slip) result)))
+
+;;reverse-name-order
+(define (reverse-name-order slip)
+  (make-slip (slip-color slip) (slip-name2 slip) (slip-name1 slip)))
+
+
+    
+
+
+;shivers-roster: ListOfSlip -> ListOfSlip
+;GIVEN: a list of slips
+;RETURNS: a list of slips containing all the students in Professor
+;Shivers' class, without duplication.
+(define (shivers-roster slips)
+ (get-s-roster slips (list)))
+
+;;get-s-roster
+(define (get-s-roster slips result)
+  (cond
+    [(empty? slips) result]
+    [(if-color-not-blue (first slips)) (get-s-roster (rest slips) result)]
+    [(if-name-already-in-list (first slips) result)
+     (get-s-roster (rest slips) result)]
+    [else (get-s-roster (rest slips) (cons (first slip) result))]))
+
+;;if-color-not-blue
+(define (if-color-not-blue slip)
+  (not (string=? (slip-color slip) "blue")))

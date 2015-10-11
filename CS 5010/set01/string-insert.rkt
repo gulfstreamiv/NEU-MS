@@ -1,0 +1,24 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname string-insert) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
+(require rackunit)
+(require "extras.rkt")
+
+(provide string-insert)
+
+;string-insert : String Number -> String
+;GIVEN: a string and a number
+;RETURNS: a new string in which a "_" inserted in the Number-th position
+
+;Example: (string-insert "abc" 1) ===> "a_bc"
+;         (string-insert "i am bolun" 4) ===> "i am_ bolun"
+;Strategy: Combine simpler functions
+
+;Function definition and implementation:
+(define (string-insert string i)
+  (string-append (string-append (substring string 0 i) "_") (substring string i)))
+
+;Testcases:
+(begin-for-test
+  (check-equal? (string-insert "abc" 1) "a_bc" "Wrong answer")
+  (check-equal? (string-insert "hello nihao" 5) "hello_ nihao" "Wrong answer"))

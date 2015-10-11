@@ -1,0 +1,278 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname screensaver-2) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
+(require "extras.rkt")
+(require 2htdp/universe)
+(require 2htdp/image)
+(require rackunit)
+
+(provide screensaver
+         initial-world
+         world-after-tick
+         world-after-key-event
+         world-rect1
+         world-rect2
+         world-paused?
+         new-rectangle
+         rect-x
+         rect-y
+         rect-vx
+         rect-vy)
+ 
+
+;Constants definition
+(define CANVAS-WIDTH 400)
+(define CANVAS-HEIGHT 300)
+(define RECTANGLE-WIDTH 60)
+(define RECTANGLE-HEIGHT 50)
+
+(define DRAW-RECTANGLE (rectangle RECTANGLE-WIDTH RECTANGLE-HEIGHT "outline" "blue"))
+(define DRAW-CANVAS (empty-scene CANVAS-WIDTH CANVAS-HEIGHT))
+
+(define PAUSE " ")
+
+;Data definition
+(define-struct world (rect1 rect2 paused? mousex mousey))
+
+(define-struct rect-info (x y vx vy selected?))
+
+
+
+
+;; screensaver : PosReal -> WorldState
+;; GIVEN: the speed of the simulation, in seconds/tick
+;; EFFECT: runs the simulation, starting with the initial state as
+;; specified in the problem set.
+;; RETURNS: the final state of the world
+  (define (screensaver n)
+    (big-bang (initial-world 1)
+              (on-tick world-after-tick n)
+              (on-draw draw-furnished-world)
+              (on-key world-after-key-event)))
+;; initial-world : Any -> WorldState
+;; GIVEN: any value (ignored)
+;; RETURNS: the initial world specified in the problem set
+  (define (initial-world rand)
+    (make-world (make-rect-info 200 100 -12 20) (make-rect-info 200 200 23 -14) #false))
+
+;; world-after-tick : WorldState -> WorldState
+;; RETURNS: the world state that should follow the given world state
+;; after a tick.
+  (define (world-after-tick w)
+    (cond
+      [(world-paused? w) w]
+      [else (make-world (rect-after-tick (world-rect1 w)) (rect-after-tick (world-rect2 w))
+                        (world-paused? w))]))
+
+ (define (rect-after-tick r)
+   (cond
+     [(and (>= (rect-info-x r) 370) (>= (rect-info-y r) 275)) (perfect-bounce r)]
+     [(and (>= (rect-info-x r) 370) (<= (rect-info-y r) 25)) (perfect-bounce r)]
+     [(and (<= (rect-info-x r) 30) (>= (rect-info-y r) 275)) (perfect-bounce r)]
+     [(and (<= (rect-info-x r) 30) (<= (rect-info-y r) 25)) (perfect-bounce r)]
+     [(or (<= (rect-info-x r) 30) (>= (rect-info-x r) 370)) (reverse-x r)]
+     [(or (<= (rect-info-y r) 25) (>= (rect-info-y r) 275)) (reverse-y r)]
+     [(check-hit-wall-both r) (move-less-both r)]
+     [(check-hit-wall-x r) (move-less-x r)]
+     [(check-hit-wall-y r) (move-less-y r)]
+     [else (normal-move r)]))
+
+(define (check-hit-wall-both r)
+  (and (check-hit-wall-x r) (check-hit-wall-y r)))
+
+(define (move-less-both r)
+  (cond
+    [(and (> (+ (rect-info-x r) (rect-info-vx r)) 370) (> (+ (rect-info-y r) (rect-info-vy r)) 275))
+     (make-rect-info 370 275 (rect-info-vx r) (rect-info-vy r))]
+    [(and (> (+ (rect-info-x r) (rect-info-vx r)) 370) (< (+ (rect-info-y r) (rect-info-vy r)) 25))
+     (make-rect-info 370 25 (rect-info-vx r) (rect-info-vy r))]
+    [(and (< (+ (rect-info-x r) (rect-info-vx r)) 30) (> (+ (rect-info-y r) (rect-info-vy r)) 275))
+     (make-rect-info 30 275 (rect-info-vx r) (rect-info-vy r))]
+    [(and (< (+ (rect-info-x r) (rect-info-vx r)) 30) (< (+ (rect-info-y r) (rect-info-vy r)) 25))
+     (make-rect-info 30 25 (rect-info-vx r) (rect-info-vy r))]))
+ 
+ (define (check-hit-wall-x r)
+   (cond
+     [(and (< (rect-info-x r) 370) (> (+ (rect-info-x r) (rect-info-vx r)) 370)) true]
+     [(and (> (rect-info-x r) 30) (< (+ (rect-info-x r) (rect-info-vx r)) 30)) true]
+     [else false]))
+
+  (define (check-hit-wall-y r)
+   (cond
+     [(and (< (rect-info-y r) 275) (> (+ (rect-info-y r) (rect-info-vy r)) 275)) true]
+     [(and (> (rect-info-y r) 25) (< (+ (rect-info-y r) (rect-info-vy r)) 25)) true]
+     [else false]))
+
+  (define (move-less-x r)
+    (if (> (+ (rect-info-x r) (rect-info-vx r)) 370)
+        (make-rect-info 370 (+ (rect-info-y r) (rect-info-vy r)) (rect-info-vx r) (rect-info-vy r))
+        (make-rect-info 25 (+ (rect-info-y r) (rect-info-vy r)) (rect-info-vx r) (rect-info-vy r))))
+
+  (define (move-less-y r)
+    (if (> (+ (rect-info-y r) (rect-info-vy r)) 275)
+        (make-rect-info (+ (rect-info-x r) (rect-info-vx r)) 275 (rect-info-vx r) (rect-info-vy r))
+        (make-rect-info (+ (rect-info-x r) (rect-info-vx r)) 25 (rect-info-vx r) (rect-info-vy r))))
+
+   (define (perfect-bounce r)
+   (make-rect-info (- (rect-info-x r) (rect-info-vx r)) (- (rect-info-y r) (rect-info-vy r))
+                   (- 0 (rect-info-vx r)) (- 0 (rect-info-vy r))))
+
+  (define (reverse-x r)
+    (cond
+      [(> (+ (rect-info-y r) (rect-info-vy r)) 275)
+       (make-rect-info (- (rect-info-x r) (rect-info-vx r)) 275
+               (- 0 (rect-info-vx r)) (rect-info-vy r))]
+      [(< (+ (rect-info-y r) (rect-info-vy r)) 25)
+       (make-rect-info (- (rect-info-x r) (rect-info-vx r)) 25
+               (- 0 (rect-info-vx r)) (rect-info-vy r))]
+      [else (make-rect-info (- (rect-info-x r) (rect-info-vx r)) (+ (rect-info-y r) (rect-info-vy r))
+                            (- 0 (rect-info-vx r)) (rect-info-vy r) )]))
+
+  (define (reverse-y r)
+    (cond
+      [(> (+ (rect-info-x r) (rect-info-vx r)) 370)
+       (make-rect-info 370 (- (rect-info-y r) (rect-info-vy r))
+                       (rect-info-vx r) (- 0 (rect-info-vy r)))]
+      [(< (+ (rect-info-x r) (rect-info-vx r)) 30)
+       (make-rect-info 30 (- (rect-info-y r) (rect-info-vy r))
+                       (rect-info-vx r) (- 0 (rect-info-vy r)))]
+      [else (make-rect-info (+ (rect-info-x r) (rect-info-vx r)) (- (rect-info-y r) (rect-info-vy r))
+               (rect-info-vx r) (- 0 (rect-info-vy r)))]))
+
+  (define (normal-move r)
+    (make-rect-info (+ (rect-info-x r) (rect-info-vx r)) (+ (rect-info-y r) (rect-info-vy r))
+               (rect-info-vx r) (rect-info-vy r)))
+
+
+  (define (draw-world w)
+    (place-image DRAW-RECTANGLE (rect-info-x (world-rect1 w)) (rect-info-y (world-rect1 w))
+                 (place-image DRAW-RECTANGLE (rect-info-x (world-rect2 w)) (rect-info-y (world-rect2 w)) DRAW-CANVAS))) 
+
+
+;Draw the location information inside the rectangle 1
+  (define (draw-rect1-location w)
+    (text (string-append "(" (number->string (rect-info-vx (world-rect1 w))) ", "
+                         (number->string (rect-info-vy (world-rect1 w))) ")")
+          12 "blue"))
+
+;Draw the location information inside the rectangle 1
+  (define (draw-rect2-location w)
+    (text (string-append "(" (number->string (rect-info-vx (world-rect2 w))) ", "
+                         (number->string (rect-info-vy (world-rect2 w))) ")")
+          12 "blue"))
+  
+;Draw the world with location info printed inside the rectangles
+  (define (draw-furnished-world w)
+    (place-image (draw-rect1-location w) (rect-info-x (world-rect1 w)) (rect-info-y (world-rect1 w))
+                 (place-image (draw-rect2-location w) (rect-info-x (world-rect2 w)) (rect-info-y (world-rect2 w))
+                              (draw-world w))))
+
+  
+    
+
+;; world-after-key-event : WorldState KeyEvent -> WorldState
+;; RETURNS: the WorldState that should follow the given worldstate
+;; after the given keyevent
+  (define (world-after-key-event w ke)
+    (if (key=? ke " ")
+        (make-world (world-rect1 w) (world-rect2 w) (not (world-paused? w)))
+        w))
+
+;; world-rect1 : WorldState -> Rectangle
+;; world-rect2 : WorldState -> Rectangle
+;; world-paused? : WorldState -> Boolean
+;; RETURNS: the specified attribute of the WorldState
+;; NOTE: if these are part of the world struct, you don't need to
+;; write any deliverables for these functions.
+
+;; new-rectangle : NonNegInt NonNegInt Int Int -> Rectangle
+;; GIVEN: 2 non-negative integers x and y, and 2 integers vx and vy
+;; RETURNS: a rectangle centered at (x,y), which will travel with
+;; velocity (vx, vy).
+  (define (new-rectangle n1 n2 i1 i2)
+    (make-rect-info n1 n2 i1 i2))
+
+;; rect-x : Rectangle -> NonNegInt
+;; rect-y : Rectangle -> NonNegInt
+;; rect-vx : Rectangle -> Int
+;; rect-vy : Rectangle -> Int
+;; RETURNS: the coordinates of the center of the rectangle and its
+;; velocity in the x- and y- directions.
+  (define (rect-x rectangle)
+    (rect-info-x rectangle))
+
+  (define (rect-y rectangle)
+    (rect-info-y rectangle))
+
+  (define (rect-vx rectangle)
+    (rect-info-vx rectangle))
+
+  (define (rect-vy rectangle)
+    (rect-info-vy rectangle))
+
+;; world-after-mouse-event
+;;  : WorldState Int Int MouseEvent -> WorldState
+;; 
+;; GIVEN: A World, the x- and y-coordinates of a mouse event, and the
+;; mouse event
+;; RETURNS: the world that should follow the given world after the given mouse
+;; event.
+  
+  (define (world-after-mouse-event world x y me )
+    (cond
+      [(mouse=? "button-up" me) (mouse-up world)]
+      [(mouse=? "button-down" me) (mouse-down world)]
+      [(mouse=? "drag" me) (mouse-drag world)]))
+
+  (define (mouse-up world)
+    (cond
+      [(if-both-select (world-rect1 world) (world-rect1 world))
+       (make-world (unselect-rect (world-rect1 world)) (unselect-rect (world-rect2 world))
+                   (world-paused? world) (world-mousex world) (world-mousey world))]
+      [(if-select (world-rect1 world))
+       (make-world (unselect-rect (world-rect1 world)) (world-rect2 world)
+                   (world-paused? world) (world-mousex world) (world-mousey world))]
+      [(if-select (world-rect2 world))
+       (make-world (world-rect1 world) (unselect-rect (world-rect2 world))
+                   (world-paused? world) (world-mousex world) (world-mousey world))]))
+
+  (define (mouse-down world)
+    (cond
+      [(if-inside-both world) (select-both world)]
+
+      
+(define HALF-WIDTH 30)
+(define HALF-LEN 25)
+
+(define (if-inside mousex mousey r)
+  (and (and (< mousex (+ (rect-info-x r) HALF-WIDTH)) (> mousex (- (rect-info-x r) HALF-WIDTH)))
+       (and (< mousey (+ (rect-info-y r) HALF-WIDTH)) (> mousey (- (rect-info-y r) HALF-WIDTH)))))
+
+(define (if-inside-both mousex mousey world)
+  (and (if-inside mousex mousey (world-rect1 world)) (if-inside mousex mousey (world-rect2 world))))
+
+
+(define (select-both w)
+  (
+     
+
+      
+(define (if-both-select r1 r2)
+  (and (rect-info-selected? r1) (rect-info-selected? r2)))
+
+(define (if-select r)
+  (rect-info-selected? r))
+
+(define (unselect-rect r)
+  (make-rect-info (rect-info-x r) (rect-info-y r) (rect-info-vx r) (rect-info-vy r) false))
+;; rect-after-mouse-event :  Rectangle Int Int MouseEvent -> Rectangle
+;; GIVEN: A rectangle, the x- and y-coordinates of a mouse event, and the
+;; mouse event
+;; RETURNS: the rectangle that should follow the given rectangle after
+;; the given mouse event
+
+;; rect-selected? : Rectangle -> Boolean
+;; RETURNS: true iff the given rectangle is selected.
+
+;; new-rectangle
+;; as before, but now it returns an UNSELECTED rectangle.

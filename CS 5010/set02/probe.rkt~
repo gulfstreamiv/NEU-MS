@@ -1,0 +1,88 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname probe) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
+(require "extras.rkt")
+(require rackunit)
+(require 2htdp/universe)
+(require 2htdp/image)
+
+(define NORTH "north")
+(define SOUTH "south")
+(define EAST "east")
+(define WEST "west")
+(define WALL_EAST 173.5)
+(define WALL_WEST -173.5)
+(define WALL_SOUTH 173.5)
+(define WALL_NORTH -173.5)
+(define DIAMETER 40)
+(define RADIUS 20)
+
+;Data definition
+(define-struct probe (x y facing))
+
+;initial-probe : Integer Integer -> Probe
+;GIVEN: an x-coordinate and a y-coordinate
+;RETURNS: a probe with its center at those coordinates, facing north.
+(define (initial-probe x y)
+  (make-probe x y NORTH))
+
+;probe-turned-left : Probe -> Probe
+;probe-turned-right : Probe -> Probe
+;GIVEN: a probe
+;RETURNS: a probe like the original, but turned 90 degrees either left
+;or right.
+(define (probe-turned-left p)
+  (cond
+    [(string=? (probe-facing p) NORTH) (make-probe (probe-x p) (probe-y p) WEST)]
+    [(string=? (probe-facing p) SOUTH) (make-probe (probe-x p) (probe-y p) EAST)]
+    [(string=? (probe-facing p) EAST) (make-probe (probe-x p) (probe-y p) NORTH)]
+    [(string=? (probe-facing p) WEST) (make-probe (probe-x p) (probe-y p) SOUTH)]))
+
+(define (probe-turned-left p)
+  (cond
+    [(string=? (probe-facing p) NORTH) (make-probe (probe-x p) (probe-y p) EAST)]
+    [(string=? (probe-facing p) SOUTH) (make-probe (probe-x p) (probe-y p) WEST)]
+    [(string=? (probe-facing p) EAST) (make-probe (probe-x p) (probe-y p) SOUTH)]
+    [(string=? (probe-facing p) WEST) (make-probe (probe-x p) (probe-y p) NORTH)]))
+
+;probe-forward : Probe PosInt -> Probe
+;GIVEN: a probe and a distance
+;RETURNS: a probe like the given one, but moved forward by the
+;specified distance.  If moving forward the specified distance would
+;cause the probe to hit any wall of the trap, then the probe should 
+;move as far as it can inside the trap, and then stop.
+(define (probe-forward p length)
+  (cond
+    [(string=? (probe-facing p) NORTH) (move-north p len)]
+    [(string=? (probe-facing p) SOUTH) (move-south p len)]
+    [(string=? (probe-facing p) EAST) (move-east p len)]
+    [(string=? (probe-facing p) WEST) (move-west p len)]
+))
+
+;move-north: probe NonNegInteger -> prob
+(define (move-north p len)
+  (cond
+    [ (or (> (- (probe-y p) len) (+ WALL_NORTH RADIUS))
+         (< (- (probe-y p) len) (- WALL_NORTH RADIUS))) (make-probe x (- (probe-y p) len) NORTH)]
+    [else (make-probe x (+ -173 RADIUS) NORTH)]))
+
+;move-south: probe NonNegInteger -> prob
+(define (move-south p len)
+  (cond
+    [ (or (< (+ (probe-y p) len) (- WALL_SOUTH RADIUS))
+         (> (+ (probe-y p) len) (+ WALL_SOUTH RADIUS))) (make-probe x (- (probe-y p) len) NORTH)]
+    [else (make-probe x (+ -173 RADIUS) NORTH)]))
+
+;move-east: probe NonNegInteger -> prob
+(define (move-north p len)
+  (cond
+    [ (or (< (- (probe-y p) len) (- WALL_NORTH RADIUS))
+         (> (- (probe-y p) len) (+ WALL_NORTH RADIUS))) (make-probe x (- (probe-y p) len) NORTH)]
+    [else (make-probe x (+ -173 RADIUS) NORTH)]))
+
+;move-north: probe NonNegInteger -> prob
+(define (move-north p len)
+  (cond
+    [ (or (< (- (probe-y p) len) (- WALL_NORTH RADIUS))
+         (> (- (probe-y p) len) (+ WALL_NORTH RADIUS))) (make-probe x (- (probe-y p) len) NORTH)]
+    [else (make-probe x (+ -173 RADIUS) NORTH)]))
